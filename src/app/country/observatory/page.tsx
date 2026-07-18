@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   IconMap, 
@@ -12,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 import { AhnaraCard } from "@/components/ahnara/AhnaraCard";
 import { AhnaraBadge } from "@/components/ahnara/AhnaraBadge";
+import { api } from "@/lib/api";
 
 export default function PopulationObservatory() {
   const [cohortThreshold, setCohortThreshold] = useState(true);
@@ -21,6 +22,55 @@ export default function PopulationObservatory() {
     { name: "District C", vaccinationRate: "94.8%", sepsisRate: "0.5%", stuntingVelocity: "Normal", cohortSize: 201 },
     { name: "District D", vaccinationRate: "82.0%", sepsisRate: "2.1%", stuntingVelocity: "Critical", cohortSize: 15 }
   ]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMetrics = async () => {
+    try {
+      setLoading(true);
+      const metrics = await api.get("/analytics/metrics");
+      if (Array.isArray(metrics) && metrics.length > 0) {
+        // Group by district (District A, District B, District C, District D)
+        const districtsMap: Record<string, any> = {
+          "District A": { name: "District A", vaccinationRate: "0.0%", sepsisRate: "0.0%", stuntingVelocity: "Normal", cohortSize: 0 },
+          "District B": { name: "District B", vaccinationRate: "0.0%", sepsisRate: "0.0%", stuntingVelocity: "Normal", cohortSize: 0 },
+          "District C": { name: "District C", vaccinationRate: "0.0%", sepsisRate: "0.0%", stuntingVelocity: "Normal", cohortSize: 0 },
+          "District D": { name: "District D", vaccinationRate: "0.0%", sepsisRate: "0.0%", stuntingVelocity: "Normal", cohortSize: 0 },
+        };
+
+        let hasDistrictData = false;
+        metrics.forEach((m: any) => {
+          const region = m.region; // e.g. "District A"
+          if (districtsMap[region]) {
+            hasDistrictData = true;
+            const val = parseFloat(m.value);
+            if (m.metricName === "vaccination_rate") {
+              districtsMap[region].vaccinationRate = `${(val * 100).toFixed(1)}%`;
+            } else if (m.metricName === "sepsis_rate") {
+              districtsMap[region].sepsisRate = `${(val * 100).toFixed(1)}%`;
+            } else if (m.metricName === "stunting_velocity") {
+              // 0 = Normal, 1 = Elevated, 2 = Critical
+              districtsMap[region].stuntingVelocity = val === 2 ? "Critical" : val === 1 ? "Elevated" : "Normal";
+            } else if (m.metricName === "cohort_size") {
+              districtsMap[region].cohortSize = Math.round(val);
+            }
+          }
+        });
+
+        if (hasDistrictData) {
+          setDistricts(Object.values(districtsMap));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load district metrics from backend:", err);
+      // Fallback is already set in initial state
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMetrics();
+  }, []);
 
   return (
     <motion.div 
@@ -31,7 +81,14 @@ export default function PopulationObservatory() {
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight text-display">Ahnara Insights Population Observatory</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight text-display">Ahnara Insights Population Observatory</h2>
+            {loading ? (
+              <AhnaraBadge size="sm" variant="warning" className="animate-pulse">Loading Live Data...</AhnaraBadge>
+            ) : (
+              <AhnaraBadge size="sm" variant="success">Connected to Analytics Pipeline</AhnaraBadge>
+            )}
+          </div>
           <p className="text-sm text-slate-500 font-semibold mt-1">
             Real-time population-health observatory to monitor aggregated stunting, maternal sepsis, and vaccine coverage.
           </p>

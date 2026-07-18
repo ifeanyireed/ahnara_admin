@@ -10,7 +10,8 @@ import {
   IconShieldLock,
   IconBell,
   IconX,
-  IconTerminal
+  IconTerminal,
+  IconBuildingHospital
 } from "@tabler/icons-react";
 import { AhnaraLoader } from "@/components/ahnara/AhnaraLoader";
 
@@ -35,6 +36,7 @@ export default function SystemLayout({ children }: { children: React.ReactNode }
 
   const menuItems = [
     { name: "Tenant Billing", href: "/system", icon: IconSettings },
+    { name: "Hospitals", href: "/system/hospitals", icon: IconBuildingHospital },
     { name: "FHIR Interop", href: "/system/fhir", icon: IconDatabase },
     { name: "Compliance Log", href: "/system/compliance", icon: IconShieldLock },
   ];
